@@ -1,0 +1,43 @@
+schema_version: 1
+stage: 0
+execution_policy: "Do not execute production cases until geometry, physics, and validation benchmark are frozen."
+
+case_defaults:
+  enabled: false
+  mesh_level: production
+  status: planned
+
+cases:
+  # Baseline: no rooftop obstacle
+  - {case_id: BASE_A000, obstacle: false, spacing_ratio: null, wind_angle: 0}
+  - {case_id: BASE_A030, obstacle: false, spacing_ratio: null, wind_angle: 30}
+  - {case_id: BASE_A045, obstacle: false, spacing_ratio: null, wind_angle: 45}
+  - {case_id: BASE_A060, obstacle: false, spacing_ratio: null, wind_angle: 60}
+  - {case_id: BASE_A090, obstacle: false, spacing_ratio: null, wind_angle: 90}
+
+  # Rooftop obstacle matrix: So/Ho x wind angle
+  - {case_id: OBS_S050_A000, obstacle: true, spacing_ratio: 0.5, wind_angle: 0}
+  - {case_id: OBS_S050_A030, obstacle: true, spacing_ratio: 0.5, wind_angle: 30}
+  - {case_id: OBS_S050_A045, obstacle: true, spacing_ratio: 0.5, wind_angle: 45}
+  - {case_id: OBS_S050_A060, obstacle: true, spacing_ratio: 0.5, wind_angle: 60}
+  - {case_id: OBS_S050_A090, obstacle: true, spacing_ratio: 0.5, wind_angle: 90}
+  - {case_id: OBS_S150_A000, obstacle: true, spacing_ratio: 1.5, wind_angle: 0}
+  - {case_id: OBS_S150_A030, obstacle: true, spacing_ratio: 1.5, wind_angle: 30}
+  - {case_id: OBS_S150_A045, obstacle: true, spacing_ratio: 1.5, wind_angle: 45}
+  - {case_id: OBS_S150_A060, obstacle: true, spacing_ratio: 1.5, wind_angle: 60}
+  - {case_id: OBS_S150_A090, obstacle: true, spacing_ratio: 1.5, wind_angle: 90}
+  - {case_id: OBS_S300_A000, obstacle: true, spacing_ratio: 3.0, wind_angle: 0}
+  - {case_id: OBS_S300_A030, obstacle: true, spacing_ratio: 3.0, wind_angle: 30}
+  - {case_id: OBS_S300_A045, obstacle: true, spacing_ratio: 3.0, wind_angle: 45}
+  - {case_id: OBS_S300_A060, obstacle: true, spacing_ratio: 3.0, wind_angle: 60}
+  - {case_id: OBS_S300_A090, obstacle: true, spacing_ratio: 3.0, wind_angle: 90}
+
+reserved_cases:
+  gci:
+    - {case_id: GCI_COARSE, mesh_level: coarse, enabled: false}
+    - {case_id: GCI_MEDIUM, mesh_level: medium, enabled: false}
+    - {case_id: GCI_FINE, mesh_level: fine, enabled: false}
+  supplementary:
+    capacity: 5
+    cases: []
+

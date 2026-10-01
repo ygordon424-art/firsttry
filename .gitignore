@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Codex local working folders
+/work/
+/outputs/
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+*.lic
+
+# Fluent and large CFD artifacts (store externally, not in Git)
+*.cas
+*.cas.gz
+*.cas.h5
+*.dat
+*.dat.gz
+*.dat.h5
+*.msh
+*.msh.gz
+*.msh.h5
+*.trn
+*.trn.h5
+*.cff
+*.flprj
+*.set
+*.jou.out
+*.bak
+*.ip
+*.gz
+*.zip
+
+# Generated run directories; curated Stage 0 status files remain tracked
+/results/runs/
+/results/artifacts/
+/results/stage0_smoke_test/*
+!/results/stage0_smoke_test/README.md
+!/results/stage0_smoke_test/smoke_test_status.json
+

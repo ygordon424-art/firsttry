@@ -1,0 +1,41 @@
+project:
+  title: "Oblique-Wind-Induced Aerodynamic Interference between Rooftop Service Structures and Photovoltaic Arrays: Load Amplification and Structural Implications"
+  target_journal: "Journal of Building Engineering"
+  stage: 0
+
+building:
+  B: TBD
+  D: TBD
+  H: TBD
+
+rooftop_obstacle:
+  Ho: TBD
+  Wo: TBD
+  Lo: TBD
+
+pv:
+  panel_length: TBD
+  panel_width: TBD
+  tilt_angle: TBD
+  clearance: TBD
+  rows: TBD
+  columns: TBD
+
+flow:
+  reference_velocity: TBD
+  reference_height: TBD
+  air_density: TBD
+  wind_direction: TBD
+
+solver:
+  turbulence_model: TBD
+  convergence_criteria: TBD
+  max_iterations: TBD
+  processor_count: TBD
+  precision: double
+
+provenance:
+  validation_benchmark: TBD
+  reference_citation: TBD
+  digitization_method: TBD
+

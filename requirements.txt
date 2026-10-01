@@ -1,0 +1,8 @@
+# Runtime dependencies. Pin these in a release-specific lock file before production runs.
+ansys-fluent-core>=0.41,<1
+PyYAML>=6,<7
+pandas>=2.2,<4
+
+# Test dependency
+pytest>=8,<10
+

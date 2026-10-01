@@ -1,0 +1,8 @@
+# Copy this file to an unambiguous, versioned model definition and replace every TBD.
+# Axes must match the Fluent export coordinate system documented for the case.
+horizontal_force_axis: Fx
+overturning_moment_axis: My
+load_height: TBD
+column_spacing: TBD
+# Angle between the brace and the selected horizontal-force direction.
+brace_angle_degrees: TBD
