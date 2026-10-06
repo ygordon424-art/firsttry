@@ -1,0 +1,22 @@
+# Flexible PV glossary
+
+- **Rigid model:** A model whose deformation is negligible for the aerodynamic quantities being studied.
+- **Aeroelastic model:** A model designed so aerodynamic loads and structural motion can interact with representative dynamic properties.
+- **Wind pressure coefficient:** Dimensionless pressure normalized by a chosen reference dynamic pressure.
+- **Buffeting:** Structural response forced by turbulent or otherwise unsteady incoming flow and wake fluctuations.
+- **Self-excited vibration:** Motion sustained or modified by aerodynamic forces that depend on the structure's own motion.
+- **Vortex-induced vibration:** Oscillation associated with unsteady vortex shedding and possible synchronization with structural motion.
+- **Flutter:** A dynamic instability in which coupled aerodynamic and structural effects can produce growing oscillation.
+- **Mode:** A characteristic deformation pattern associated with a natural frequency in a linearized structural system.
+- **Natural frequency:** Frequency at which a system tends to vibrate freely around an equilibrium state.
+- **PSD:** Power spectral density; distribution of signal variance or power over frequency.
+- **FFT:** Fast Fourier transform; an efficient algorithm for computing a discrete Fourier spectrum.
+- **RMS:** Root mean square; the square root of the mean squared signal value.
+- **Geometric nonlinearity:** Nonlinear response caused by changes in geometry, such as large displacement or stress stiffening.
+- **Material nonlinearity:** Nonlinear stress–strain or constitutive behavior of a material.
+- **Tension-only cable:** An idealized cable element that carries tension but not compression.
+- **Pretension:** Initial tensile force or stress applied before the studied external loading.
+- **Bending–torsion coupling:** Interaction in which bending and twisting responses influence one another.
+- **Frequency doubling / second harmonic:** A signal component near twice a selected fundamental frequency; its presence alone does not identify a physical mechanism.
+- **One-way FSI:** Fluid–structure interaction in which loads pass from one solver to another without feedback to update the fluid solution.
+- **Two-way FSI:** Fluid–structure interaction with repeated exchange of loads and deformation so each field affects the other.

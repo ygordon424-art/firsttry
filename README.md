@@ -146,3 +146,33 @@ python -m pytest -q
 ## 13. Data provenance policy
 
 Published experimental data used for validation must retain full citation and provenance information. Each digitized dataset must identify the publication, DOI or stable URL, figure/table, units, digitization method, operator/date, transformations, and known uncertainty. Never silently alter raw reference data or mix synthetic demonstrations with research results.
+
+## 14. Stage 1 Prep — flexible-PV experimental data intake
+
+Stage 1 Prep adds read-only experimental-data auditing and signal-analysis interfaces while the research direction and source datasets remain unfrozen. It does **not** start Fluent or Abaqus, define a final physical model, or produce paper results.
+
+Install the additional dependencies without changing the frozen Stage 0 dependency set:
+
+```powershell
+python -m pip install -r requirements-stage1.txt
+```
+
+Audit a received CSV, delimited TXT/DAT, or Excel workbook:
+
+```powershell
+python scripts/audit_experimental_data.py path\to\data.csv --output-dir audit_output
+```
+
+The audit writes `audit_report.json` and `audit_report.md`, leaves the source untouched, and reports table shape, numeric columns, missing/non-finite values, time-column detection, sampling rate, duration, timestamp duplication, interval uniformity, and IQR-based potential outliers. Unsupported or ambiguous formats fail explicitly.
+
+Analyze a uniformly sampled displacement CSV:
+
+```powershell
+python scripts/analyze_displacement.py path\to\displacement.csv --time-column time --displacement-column displacement --displacement-unit mm --output-dir analysis_output
+```
+
+Outputs include descriptive statistics, detrended signal, FFT, Welch PSD, dominant-frequency candidates, `f0/2f0/3f0` features, amplitude ratios, CSV summaries, and three PNG plots. A fundamental may be specified with `--fundamental-frequency`; otherwise the largest FFT peak is reported only as a candidate. No nonlinear mechanism is inferred automatically.
+
+`analyze_pressure_array.py` provides modular preparatory interfaces for synchronized pressure channels, Cp conversion, cross-correlation, cross-spectrum, coherence, and phase lag. Formal pressure-array analysis waits for verified channel maps, reference conditions, synchronization, and provenance.
+
+All generated unit-test signals are explicitly labeled `SYNTHETIC_TEST_DATA`, exist only inside temporary test directories, and are forbidden from writing beneath a `results` directory. Synthetic tests verify software behavior only and cannot support a research claim or novelty decision. See `docs/STAGE1_DATA_REQUIREMENTS.md`, `docs/FLEXIBLE_PV_GLOSSARY.md`, and `docs/STAGE1_DECISION_GATE.md` before accepting real data.
