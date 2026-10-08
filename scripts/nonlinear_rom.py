@@ -37,6 +37,14 @@ MODEL_TYPES = (MODEL_LIN, MODEL_GEO, MODEL_TENSION_ONLY)
 CLASSIFICATION = "MECHANISM_PROTOTYPE"
 STAGE2_CLASSIFICATION = "STAGE2_MECHANISM_DEVELOPMENT"
 ALLOWED_CLASSIFICATIONS = {CLASSIFICATION, STAGE2_CLASSIFICATION}
+CABLE_MODE_NONE = "NONE"
+BILATERAL_LINEAR = "BILATERAL_LINEAR"
+LOW_TENSION_SOFTENING = "LOW_TENSION_SOFTENING"
+TRUE_TENSION_ONLY = "TRUE_TENSION_ONLY"
+CABLE_MODES = {CABLE_MODE_NONE, BILATERAL_LINEAR, LOW_TENSION_SOFTENING, TRUE_TENSION_ONLY}
+ABRUPT_PIECEWISE = "ABRUPT_PIECEWISE"
+SMOOTH_TRANSITION = "SMOOTH_TRANSITION"
+TRANSITION_FORMS = {ABRUPT_PIECEWISE, SMOOTH_TRANSITION}
 
 
 @dataclass(frozen=True)
@@ -47,14 +55,18 @@ class MechanismSwitches:
     cubic_stiffness: bool = False
     bending_torsion_coupling: bool = False
     tension_only: bool = False
+    cable_surrogate_mode: str = CABLE_MODE_NONE
+    low_tension_transition: str = ABRUPT_PIECEWISE
 
-    def as_dict(self) -> dict[str, bool]:
+    def as_dict(self) -> dict[str, bool | str]:
         return {
             "linear": True,
             "quadratic_coupling": self.quadratic_coupling,
             "cubic_stiffness": self.cubic_stiffness,
             "bending_torsion_coupling": self.bending_torsion_coupling,
             "tension_only": self.tension_only,
+            "cable_surrogate_mode": self.cable_surrogate_mode,
+            "low_tension_transition": self.low_tension_transition,
         }
 
 
@@ -159,9 +171,18 @@ def forcing_function(config: dict[str, Any]) -> Callable[[float], np.ndarray]:
     raise ValueError(f"Unknown forcing type: {forcing_type}")
 
 
-def tension_element(
-    q: np.ndarray, config: dict[str, Any], *, tension_only: bool
+def cable_surrogate(
+    q: np.ndarray,
+    config: dict[str, Any],
+    *,
+    mode: str,
+    transition_form: str = ABRUPT_PIECEWISE,
 ) -> tuple[np.ndarray, float, float, str]:
+    """Evaluate one explicitly named cable-surrogate constitutive mode."""
+    if mode not in CABLE_MODES - {CABLE_MODE_NONE}:
+        raise ValueError(f"Cable surrogate mode must be one of {sorted(CABLE_MODES - {CABLE_MODE_NONE})}")
+    if transition_form not in TRANSITION_FORMS:
+        raise ValueError(f"Transition form must be one of {sorted(TRANSITION_FORMS)}")
     parameters = config["tension_surrogate"]
     direction = np.asarray(parameters["direction"], dtype=float)
     if direction.shape != (2,) or np.linalg.norm(direction) == 0:
@@ -170,27 +191,56 @@ def tension_element(
     pretension = float(parameters["pretension"])
     threshold = float(parameters["low_tension_threshold"])
     ratio = float(parameters["low_tension_stiffness_ratio"])
-    if stiffness <= 0 or not 0 <= ratio <= 1 or threshold < 0 or pretension < threshold:
+    if stiffness <= 0 or not 0 <= ratio <= 1 or threshold < 0 or pretension < 0:
         raise ValueError("Invalid tension surrogate stiffness, ratio, threshold, or pretension")
     extension = float(direction @ q)
     raw_tension = pretension + stiffness * extension
-    if not tension_only:
+    if mode == BILATERAL_LINEAR:
         return direction * stiffness * extension, raw_tension, stiffness, "BIDIRECTIONAL_LINEAR"
+    if mode == TRUE_TENSION_ONLY:
+        if threshold != 0:
+            raise ValueError("TRUE_TENSION_ONLY requires low_tension_threshold = 0")
+        if raw_tension > 0:
+            return direction * stiffness * extension, raw_tension, stiffness, "TAUT"
+        return direction * (0.0 - pretension), 0.0, 0.0, "ZERO_TENSION"
+    if pretension < threshold:
+        raise ValueError("LOW_TENSION_SOFTENING requires pretension >= low_tension_threshold")
     transition_extension = (threshold - pretension) / stiffness
-    if raw_tension > threshold:
-        tension = raw_tension
-        tangent = stiffness
-        state = "TAUT"
-    else:
-        tangent = stiffness * ratio
-        tension = threshold + tangent * (extension - transition_extension)
-        if tension <= 0:
-            tension = 0.0
-            tangent = 0.0
-            state = "ZERO_TENSION"
+    if transition_form == ABRUPT_PIECEWISE:
+        if raw_tension > threshold:
+            tension = raw_tension
+            tangent = stiffness
+            state = "TAUT"
         else:
+            tangent = stiffness * ratio
+            tension = threshold + tangent * (extension - transition_extension)
             state = "LOW_TENSION"
+    else:
+        width_tension = float(parameters.get("smooth_transition_width", 0.01))
+        if width_tension <= 0:
+            raise ValueError("smooth_transition_width must be positive")
+        width_extension = width_tension / stiffness
+        normalized = (extension - transition_extension) / width_extension
+        softplus = float(np.logaddexp(0.0, normalized))
+        sigmoid = float(1.0 / (1.0 + np.exp(-np.clip(normalized, -700.0, 700.0))))
+        low_stiffness = stiffness * ratio
+        stiffness_change = stiffness - low_stiffness
+        tension = (
+            threshold
+            + low_stiffness * (extension - transition_extension)
+            + stiffness_change * width_extension * (softplus - np.log(2.0))
+        )
+        tangent = low_stiffness + stiffness_change * sigmoid
+        state = "LOW_TENSION" if raw_tension <= threshold else "TAUT"
     return direction * (tension - pretension), tension, tangent, state
+
+
+def tension_element(
+    q: np.ndarray, config: dict[str, Any], *, tension_only: bool
+) -> tuple[np.ndarray, float, float, str]:
+    """Backward-compatible wrapper; new work should select a named cable mode."""
+    mode = LOW_TENSION_SOFTENING if tension_only else BILATERAL_LINEAR
+    return cable_surrogate(q, config, mode=mode, transition_form=ABRUPT_PIECEWISE)
 
 
 def internal_force(
@@ -226,10 +276,22 @@ def internal_force(
     if mechanism_switches.bending_torsion_coupling:
         beta = float(coefficients["cubic_coupling"])
         nonlinear += np.array([beta * z * theta**2, beta * theta * z**2])
-    if not mechanism_switches.tension_only:
+    cable_mode = mechanism_switches.cable_surrogate_mode
+    if cable_mode not in CABLE_MODES:
+        raise ValueError(f"Unknown cable surrogate mode: {cable_mode}")
+    if cable_mode == CABLE_MODE_NONE and mechanism_switches.tension_only:
+        # Compatibility mapping for Stage 1/2 aggregate cases.
+        cable_mode = LOW_TENSION_SOFTENING
+    if cable_mode == CABLE_MODE_NONE:
         return linear + nonlinear, float("nan"), float("nan"), "NOT_APPLICABLE"
-    element_force, tension, tangent, state = tension_element(
-        q, config, tension_only=tension_only
+    if cable_mode == LOW_TENSION_SOFTENING and not tension_only:
+        # Preserve the earlier explicit tension_only=False bilateral control.
+        cable_mode = BILATERAL_LINEAR
+    element_force, tension, tangent, state = cable_surrogate(
+        q,
+        config,
+        mode=cable_mode,
+        transition_form=mechanism_switches.low_tension_transition,
     )
     return linear + nonlinear + element_force, tension, tangent, state
 
@@ -272,6 +334,8 @@ def simulate(
             active_switches = MechanismSwitches(True, True, True, False)
         else:
             active_switches = MechanismSwitches(tension_only=True)
+    if active_switches.cable_surrogate_mode != CABLE_MODE_NONE:
+        active_tension_only = active_switches.cable_surrogate_mode != BILATERAL_LINEAR
     started = wall_time.perf_counter()
 
     def derivative(t: float, state: np.ndarray) -> np.ndarray:
@@ -342,6 +406,35 @@ def linear_energy(result: RomResult, config: dict[str, Any]) -> np.ndarray:
         "ni,ij,nj->n", result.displacement, stiffness, result.displacement
     )
     return kinetic + potential
+
+
+def cable_state_statistics(result: RomResult) -> dict[str, float | int | None]:
+    """Summarize cable-surrogate states without assigning a physical cause."""
+    finite_tension = result.tension_surrogate[np.isfinite(result.tension_surrogate)]
+    applicable_states = [state for state in result.stiffness_state if state != "NOT_APPLICABLE"]
+    transitions = sum(
+        current != previous
+        for previous, current in zip(applicable_states[:-1], applicable_states[1:])
+    )
+    if not finite_tension.size:
+        return {
+            "minimum_tension": None,
+            "maximum_tension": None,
+            "fraction_time_tension_le_zero": 0.0,
+            "fraction_time_softened_state": 0.0,
+            "number_stiffness_transitions": 0,
+        }
+    state_count = len(applicable_states)
+    softened_count = sum(state == "LOW_TENSION" for state in applicable_states)
+    return {
+        "minimum_tension": float(np.min(finite_tension)),
+        "maximum_tension": float(np.max(finite_tension)),
+        "fraction_time_tension_le_zero": float(np.mean(finite_tension <= 0.0)),
+        "fraction_time_softened_state": (
+            float(softened_count / state_count) if state_count else 0.0
+        ),
+        "number_stiffness_transitions": int(transitions),
+    }
 
 
 def analyze_response(result: RomResult, fundamental_frequency: float) -> dict[str, Any]:

@@ -209,3 +209,15 @@ python fe/abaqus/generate_model.py --config config/fe_generic.yaml --output-dir 
 ```
 
 Generation does not submit Abaqus. If Abaqus or its license is unavailable, no FE values are fabricated. The current cable deck is a bilateral-truss baseline; `TENSION_ONLY_FE = NOT YET VERIFIED`. Read `docs/RESEARCH_PROTOCOL_FROZEN.md` and `docs/ABAQUS_GENERIC_MODEL.md` before interpreting or extending either prototype.
+
+## 17. Stage 2 mechanism falsification
+
+The falsification branch separates `BILATERAL_LINEAR`, positive-tension `LOW_TENSION_SOFTENING`, and `TRUE_TENSION_ONLY`. Low-tension softening has independently selectable abrupt and continuously differentiable transition forms. True tension-only rejects any positive low-tension threshold and removes stiffness only when the unmodified tension prediction would become non-positive.
+
+Run the predefined low-cost controls with:
+
+```powershell
+python scripts/run_mechanism_falsification.py
+```
+
+The suite includes positive/zero-tension controls, independent near-1:2 and detuned synthetic modal controls, and minimal step/solver/window robustness checks. It does not tune coefficients or search for a desired harmonic. Outputs remain under `prototype_results/stage2_falsification/`; the reviewable summary is `reports/STAGE2_MECHANISM_FALSIFICATION.md`. See `docs/STAGE2_FALSIFICATION_METHOD.md` for the exact constitutive equations and claim limits.

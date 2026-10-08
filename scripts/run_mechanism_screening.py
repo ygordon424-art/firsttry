@@ -152,7 +152,12 @@ def _render_report(
         "|---|---|---:|---|---|---:|---:|---:|---:|---:|---|---:|---:|",
     ]
     for row in rows:
-        switches = ", ".join(name for name, enabled in row["mechanism_switches"].items() if enabled)
+        switches = ", ".join(
+            name
+            for name, enabled in row["mechanism_switches"].items()
+            if enabled is True
+            or (name == "cable_surrogate_mode" and enabled not in {"NONE", ""})
+        )
         display = {
             **row,
             "switches": switches,

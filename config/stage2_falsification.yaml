@@ -1,0 +1,71 @@
+# Predefined Stage 2 falsification controls. No parameter is experimental.
+data_classification: STAGE2_MECHANISM_DEVELOPMENT
+parameter_status: SYNTHETIC / NON-PHYSICAL DEFAULT
+
+coordinates:
+  order: [z, theta]
+  units: [arbitrary_displacement, arbitrary_rotation]
+
+dynamics:
+  mass_matrix: [[1.0, 0.0], [0.0, 0.20]]
+  linear_stiffness_matrix: [[160.0, 3.0], [3.0, 72.0]]
+  damping_ratio: 0.02
+
+geometric_nonlinearity:
+  cubic_z: 300.0
+  cubic_theta: 25.0
+  cubic_coupling: 80.0
+  quadratic_coupling: 10.0
+
+tension_surrogate:
+  direction: [1.0, 0.20]
+  stiffness: 15.0
+  low_tension_stiffness_ratio: 0.10
+  pretension: 0.10
+  low_tension_threshold: 0.05
+  smooth_transition_width: 0.01
+  tension_only: true
+
+forcing:
+  type: harmonic
+  amplitudes: [1.0, 0.08]
+  frequency_hz: 0.80
+  phases_deg: [0.0, 0.0]
+
+initial_conditions:
+  displacement: [0.0, 0.0]
+  velocity: [0.0, 0.0]
+
+solver:
+  method: RK45
+  duration_seconds: 20.0
+  sampling_frequency_hz: 100.0
+  max_step_seconds: 0.01
+  relative_tolerance: 1.0e-7
+  absolute_tolerance: 1.0e-9
+  max_runtime_seconds: 300.0
+
+analysis:
+  fundamental_frequency_hz: 0.80
+  frequency_reference: FORCING
+  discard_initial_fraction: 0.50
+  spectral_window: hann
+  frequency_bin_tolerance_hz: 0.06
+  minimum_forcing_cycles: 8
+  integer_cycle_window: true
+
+predefined_controls:
+  true_tension_positive_pretension: 0.20
+  true_tension_crossing_pretension: 0.02
+  internal_resonance:
+    mass_matrix: [[1.0, 0.0], [0.0, 0.20]]
+    near_1_to_2_stiffness_matrix: [[100.0, 0.0], [0.0, 80.0]]
+    detuned_stiffness_matrix: [[100.0, 0.0], [0.0, 51.2]]
+    forcing_amplitudes: [1.0, 0.0]
+    label: SYNTHETIC INTERNAL-RESONANCE CONTROL
+  robustness:
+    half_max_step_seconds: 0.005
+    alternative_solver: DOP853
+    long_duration_seconds: 30.0
+    long_discard_initial_fraction: 0.3333333333333333
+    long_minimum_forcing_cycles: 16
