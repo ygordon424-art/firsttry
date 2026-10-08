@@ -16,6 +16,7 @@ Thumbs.db
 # Codex local working folders
 /work/
 /outputs/
+/prototype_results/
 
 # Local secrets and environment files
 .env
@@ -50,4 +51,3 @@ Thumbs.db
 /results/stage0_smoke_test/*
 !/results/stage0_smoke_test/README.md
 !/results/stage0_smoke_test/smoke_test_status.json
-
