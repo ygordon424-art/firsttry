@@ -1,0 +1,6 @@
+# Synthetic placeholder only. A future branch supplies the physical definition.
+frequency_value: 3.0
+frequency_unit: Hz
+frequency_reference: SYNTHETIC_RESPONSE_FREQUENCY
+source: SYNTHETIC_CONTROL
+case_id: P0
