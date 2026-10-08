@@ -16,8 +16,10 @@
 - Experimental validation performed: **NO**
 - CFD started: **NO**
 - FSI started: **NO**
-- All tests passed: **PENDING CLEAN-HEAD TEST**
+- All tests passed: **YES**
 - Runtime of mechanism suite: **41.060 s**
+
+Clean-HEAD verification for source commit `c56aa30`: **28 passed in 11.67 s**. The test copy was exported from the commit so unrelated uncommitted workspace files could not affect the result.
 
 ## Mechanism-screening record
 
