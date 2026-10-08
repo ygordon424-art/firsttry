@@ -1,0 +1,70 @@
+{
+  "configuration": {
+    "analysis": {
+      "eigenmodes": 5,
+      "maximum_runtime_seconds": 300
+    },
+    "cable": {
+      "area": 0.0001,
+      "pretension": 100.0,
+      "youngs_modulus": "7.0e10"
+    },
+    "damping": {
+      "modal_ratio": 0.02
+    },
+    "data_classification": "GENERIC_FE_PROTOTYPE",
+    "geometry": {
+      "cable_spacing": 0.6,
+      "panel_width": 0.6,
+      "span": 2.0
+    },
+    "load": {
+      "lateral_location_ratio": 0.0,
+      "vertical_force": -10.0
+    },
+    "output": {
+      "cable_axial_force": true,
+      "internal_force_histories": true,
+      "modal_frequencies": true,
+      "reaction_forces": true,
+      "torsional_response": true,
+      "vertical_displacement": true
+    },
+    "panel": {
+      "mass": 8.0,
+      "rotational_inertia": 0.25
+    },
+    "parameter_status": "GENERIC_PLACEHOLDER_PARAMETER",
+    "support_conditions": {
+      "type": "PINNED_TRANSLATIONS"
+    },
+    "switches": {
+      "bending_torsion_freedom": true,
+      "nlgeom": true,
+      "pretension": false,
+      "tension_only": false
+    }
+  },
+  "data_classification": "GENERIC_FE_PROTOTYPE",
+  "output_plan": {
+    "TENSION_ONLY_FE": "NOT YET VERIFIED",
+    "data_classification": "GENERIC_FE_PROTOTYPE",
+    "harmonic_compatibility": "time,z,theta columns are required for harmonic_analysis.py",
+    "planned_outputs": {
+      "cable_axial_force": "derive from verified cable stress/section data; do not invent",
+      "internal_force_histories": "verified element output in future dynamic steps",
+      "modal_frequencies": "GENERIC_MODES eigenfrequencies",
+      "reaction_forces": "SUPPORTS RF history/field output",
+      "torsional_response": "PANEL_REFERENCE UR1 when available",
+      "u_z": "PANEL_REFERENCE U3 history"
+    },
+    "requested_switches": {
+      "bending_torsion_freedom": true,
+      "nlgeom": true,
+      "pretension": false,
+      "tension_only": false
+    }
+  },
+  "parameter_status": "GENERIC_PLACEHOLDER_PARAMETER",
+  "result_status": "INPUT_GENERATED_NOT_SOLVED"
+}

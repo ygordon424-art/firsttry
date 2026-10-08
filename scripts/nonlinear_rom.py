@@ -35,6 +35,27 @@ MODEL_GEO = "MODEL_GEO"
 MODEL_TENSION_ONLY = "MODEL_TENSION_ONLY"
 MODEL_TYPES = (MODEL_LIN, MODEL_GEO, MODEL_TENSION_ONLY)
 CLASSIFICATION = "MECHANISM_PROTOTYPE"
+STAGE2_CLASSIFICATION = "STAGE2_MECHANISM_DEVELOPMENT"
+ALLOWED_CLASSIFICATIONS = {CLASSIFICATION, STAGE2_CLASSIFICATION}
+
+
+@dataclass(frozen=True)
+class MechanismSwitches:
+    """Independent nonlinear terms; the base linear M/C/K system is always present."""
+
+    quadratic_coupling: bool = False
+    cubic_stiffness: bool = False
+    bending_torsion_coupling: bool = False
+    tension_only: bool = False
+
+    def as_dict(self) -> dict[str, bool]:
+        return {
+            "linear": True,
+            "quadratic_coupling": self.quadratic_coupling,
+            "cubic_stiffness": self.cubic_stiffness,
+            "bending_torsion_coupling": self.bending_torsion_coupling,
+            "tension_only": self.tension_only,
+        }
 
 
 @dataclass(frozen=True)
@@ -51,14 +72,15 @@ class RomResult:
     natural_frequencies_hz: np.ndarray
     runtime_seconds: float
     solver_message: str
+    mechanism_switches: MechanismSwitches
 
 
 def load_config(path: Path) -> dict[str, Any]:
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(config, dict):
         raise ValueError("ROM configuration must be a YAML mapping")
-    if config.get("data_classification") != CLASSIFICATION:
-        raise ValueError(f"data_classification must be {CLASSIFICATION}")
+    if config.get("data_classification") not in ALLOWED_CLASSIFICATIONS:
+        raise ValueError(f"data_classification must be one of {sorted(ALLOWED_CLASSIFICATIONS)}")
     if "SYNTHETIC" not in str(config.get("parameter_status", "")).upper():
         raise ValueError("ROM defaults must be explicitly marked SYNTHETIC")
     return config
@@ -177,33 +199,47 @@ def internal_force(
     model_type: str,
     *,
     tension_only: bool = False,
+    mechanism_switches: MechanismSwitches | None = None,
 ) -> tuple[np.ndarray, float, float, str]:
     if model_type not in MODEL_TYPES:
         raise ValueError(f"Unknown model type: {model_type}")
     q = np.asarray(q, dtype=float)
     linear = _matrix(config, "linear_stiffness_matrix") @ q
-    if model_type == MODEL_LIN:
-        return linear, float("nan"), float("nan"), "NOT_APPLICABLE"
-    if model_type == MODEL_GEO:
-        z, theta = q
-        coefficients = config["geometric_nonlinearity"]
+    if mechanism_switches is None:
+        if model_type == MODEL_LIN:
+            mechanism_switches = MechanismSwitches()
+        elif model_type == MODEL_GEO:
+            # Backward-compatible Stage 1 aggregate model. Stage 2 uses explicit switches.
+            mechanism_switches = MechanismSwitches(True, True, True, False)
+        else:
+            mechanism_switches = MechanismSwitches(tension_only=True)
+    z, theta = q
+    coefficients = config["geometric_nonlinearity"]
+    nonlinear = np.zeros(2)
+    if mechanism_switches.quadratic_coupling:
+        gamma = float(coefficients["quadratic_coupling"])
+        nonlinear += np.array([gamma * z * theta, 0.5 * gamma * z**2])
+    if mechanism_switches.cubic_stiffness:
         az = float(coefficients["cubic_z"])
         at = float(coefficients["cubic_theta"])
+        nonlinear += np.array([az * z**3, at * theta**3])
+    if mechanism_switches.bending_torsion_coupling:
         beta = float(coefficients["cubic_coupling"])
-        gamma = float(coefficients["quadratic_coupling"])
-        nonlinear = np.array(
-            [az * z**3 + beta * z * theta**2 + gamma * z * theta,
-             at * theta**3 + beta * theta * z**2 + 0.5 * gamma * z**2]
-        )
+        nonlinear += np.array([beta * z * theta**2, beta * theta * z**2])
+    if not mechanism_switches.tension_only:
         return linear + nonlinear, float("nan"), float("nan"), "NOT_APPLICABLE"
     element_force, tension, tangent, state = tension_element(
         q, config, tension_only=tension_only
     )
-    return linear + element_force, tension, tangent, state
+    return linear + nonlinear + element_force, tension, tangent, state
 
 
 def simulate(
-    config: dict[str, Any], model_type: str, *, tension_only: bool | None = None
+    config: dict[str, Any],
+    model_type: str,
+    *,
+    tension_only: bool | None = None,
+    mechanism_switches: MechanismSwitches | None = None,
 ) -> RomResult:
     mass = _matrix(config, "mass_matrix")
     damping = damping_matrix(config)
@@ -228,6 +264,14 @@ def simulate(
         if tension_only is None and model_type == MODEL_TENSION_ONLY
         else bool(tension_only)
     )
+    active_switches = mechanism_switches
+    if active_switches is None:
+        if model_type == MODEL_LIN:
+            active_switches = MechanismSwitches()
+        elif model_type == MODEL_GEO:
+            active_switches = MechanismSwitches(True, True, True, False)
+        else:
+            active_switches = MechanismSwitches(tension_only=True)
     started = wall_time.perf_counter()
 
     def derivative(t: float, state: np.ndarray) -> np.ndarray:
@@ -236,7 +280,11 @@ def simulate(
         q = state[:2]
         velocity = state[2:]
         restoring, _, _, _ = internal_force(
-            q, config, model_type, tension_only=active_tension_only
+            q,
+            config,
+            model_type,
+            tension_only=active_tension_only,
+            mechanism_switches=active_switches,
         )
         acceleration = np.linalg.solve(mass, forcing(t) - damping @ velocity - restoring)
         return np.concatenate([velocity, acceleration])
@@ -260,7 +308,11 @@ def simulate(
     states: list[str] = []
     for q in solution.y[:2].T:
         _, tension, tangent, state = internal_force(
-            q, config, model_type, tension_only=active_tension_only
+            q,
+            config,
+            model_type,
+            tension_only=active_tension_only,
+            mechanism_switches=active_switches,
         )
         tensions.append(tension)
         tangents.append(tangent)
@@ -278,6 +330,7 @@ def simulate(
         natural_frequencies_hz=natural_frequencies(config),
         runtime_seconds=runtime,
         solver_message=str(solution.message),
+        mechanism_switches=active_switches,
     )
 
 
@@ -322,10 +375,18 @@ def _git_sha(repository_root: Path) -> str:
     return "UNKNOWN"
 
 
-def _save_plot(path: Path, x: np.ndarray, y: np.ndarray, xlabel: str, ylabel: str) -> None:
+def _save_plot(
+    path: Path,
+    x: np.ndarray,
+    y: np.ndarray,
+    xlabel: str,
+    ylabel: str,
+    *,
+    classification: str = CLASSIFICATION,
+) -> None:
     figure, axis = plt.subplots(figsize=(8, 4.5))
     axis.plot(x, y, linewidth=0.9)
-    axis.set(xlabel=xlabel, ylabel=ylabel, title=f"{CLASSIFICATION} — SYNTHETIC")
+    axis.set(xlabel=xlabel, ylabel=ylabel, title=f"{classification} — SYNTHETIC")
     axis.grid(True, alpha=0.3)
     figure.tight_layout()
     figure.savefig(path, dpi=160)
@@ -344,6 +405,7 @@ def write_outputs(
     if any(part.lower() == "results" for part in output_dir.resolve().parts):
         raise ValueError("Mechanism prototype output is forbidden under the formal results directory")
     output_dir.mkdir(parents=True, exist_ok=False)
+    classification = str(config["data_classification"])
     pd.DataFrame(
         {
             "time_seconds": result.time,
@@ -356,7 +418,7 @@ def write_outputs(
             "T_surrogate": result.tension_surrogate,
             "K_tangent": result.tangent_stiffness,
             "stiffness_state": result.stiffness_state,
-            "data_classification": CLASSIFICATION,
+            "data_classification": classification,
         }
     ).to_csv(output_dir / "time_history.csv", index=False)
     spectrum_rows: list[dict[str, Any]] = []
@@ -371,7 +433,7 @@ def write_outputs(
                     "spectrum_type": spectrum_type,
                     "frequency_hz": frequency,
                     "value": value,
-                    "data_classification": CLASSIFICATION,
+                    "data_classification": classification,
                 }
                 for frequency, value in zip(
                     analysis[signal_name][frequency_key], analysis[signal_name][value_key]
@@ -390,7 +452,7 @@ def write_outputs(
                 "f0_hz": harmonic["fundamental_frequency_hz"],
                 "A_2f_over_A_f": harmonic["A_2f_over_A_f"],
                 "A_3f_over_A_f": harmonic["A_3f_over_A_f"],
-                "data_classification": CLASSIFICATION,
+                "data_classification": classification,
                 "interpretation": "Signal feature only; no physical mechanism is inferred.",
             }
         )
@@ -401,6 +463,7 @@ def write_outputs(
         "git_commit": _git_sha(repository_root),
         "model_type": result.model_type,
         "tension_only": result.tension_only,
+        "mechanism_switches": result.mechanism_switches.as_dict(),
         "parameter_set": config,
         "solver": {
             "name": "scipy.integrate.solve_ivp",
@@ -413,14 +476,19 @@ def write_outputs(
         "runtime_seconds": result.runtime_seconds,
         "natural_frequencies_hz": result.natural_frequencies_hz.tolist(),
         "observed_stiffness_states": sorted(set(result.stiffness_state)),
-        "data_classification": CLASSIFICATION,
+        "data_classification": classification,
         "claim_limit": "MECHANISM_PROTOTYPE only; not validated and not a research conclusion.",
     }
     (output_dir / "metadata.json").write_text(
         json.dumps(metadata, indent=2, allow_nan=False) + "\n", encoding="utf-8"
     )
     _save_plot(
-        output_dir / "z_time_history.png", result.time, result.displacement[:, 0], "Time (s)", "z"
+        output_dir / "z_time_history.png",
+        result.time,
+        result.displacement[:, 0],
+        "Time (s)",
+        "z",
+        classification=classification,
     )
     _save_plot(
         output_dir / "theta_time_history.png",
@@ -428,6 +496,7 @@ def write_outputs(
         result.displacement[:, 1],
         "Time (s)",
         "theta",
+        classification=classification,
     )
     for signal_name in ("z", "theta"):
         figure, axis = plt.subplots(figsize=(8, 4.5))
@@ -438,7 +507,7 @@ def write_outputs(
         axis.set(
             xlabel="Frequency (Hz)",
             ylabel=f"{signal_name} PSD",
-            title=f"{CLASSIFICATION} — SYNTHETIC",
+            title=f"{classification} — SYNTHETIC",
         )
         axis.grid(True, alpha=0.3)
         figure.tight_layout()
@@ -453,7 +522,7 @@ def write_outputs(
     ]
     figure, axis = plt.subplots(figsize=(8, 4.5))
     axis.bar(ratio_labels, ratios)
-    axis.set(ylabel="Amplitude ratio", title=f"{CLASSIFICATION} — signal features only")
+    axis.set(ylabel="Amplitude ratio", title=f"{classification} — signal features only")
     axis.tick_params(axis="x", rotation=20)
     figure.tight_layout()
     figure.savefig(output_dir / "harmonic_ratio.png", dpi=160)
@@ -465,6 +534,7 @@ def write_outputs(
             result.tension_surrogate,
             "Time (s)",
             "T_surrogate",
+            classification=classification,
         )
         _save_plot(
             output_dir / "tangent_stiffness.png",
@@ -472,6 +542,7 @@ def write_outputs(
             result.tangent_stiffness,
             "Time (s)",
             "K_tangent",
+            classification=classification,
         )
     else:
         for filename, label in (
@@ -480,7 +551,7 @@ def write_outputs(
         ):
             figure, axis = plt.subplots(figsize=(8, 4.5))
             axis.text(0.5, 0.5, label, ha="center", va="center", transform=axis.transAxes)
-            axis.set(title=f"{CLASSIFICATION} — {result.model_type}")
+            axis.set(title=f"{classification} — {result.model_type}")
             axis.set_axis_off()
             figure.tight_layout()
             figure.savefig(output_dir / filename, dpi=160)

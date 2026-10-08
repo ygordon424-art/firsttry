@@ -1,0 +1,9 @@
+{
+  "ABAQUS_AVAILABLE": "NO",
+  "ABAQUS_EXECUTABLE": null,
+  "LICENSE_AVAILABLE": "UNKNOWN",
+  "LICENSE_ENVIRONMENT_VARIABLE_PRESENT": false,
+  "PYTHON_INTERFACE": "UNKNOWN",
+  "SMOKE_TEST": "NOT RUN",
+  "sensitive_values_reported": false
+}

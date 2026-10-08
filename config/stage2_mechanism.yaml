@@ -1,0 +1,64 @@
+# Frozen Stage 2 mechanism-screening configuration.
+# Every numerical value is a SYNTHETIC / NON-PHYSICAL DEFAULT.
+data_classification: STAGE2_MECHANISM_DEVELOPMENT
+parameter_status: SYNTHETIC / NON-PHYSICAL DEFAULT
+
+coordinates:
+  order: [z, theta]
+  units: [arbitrary_displacement, arbitrary_rotation]
+
+dynamics:
+  mass_matrix:
+    - [1.0, 0.0]
+    - [0.0, 0.20]
+  linear_stiffness_matrix:
+    - [160.0, 3.0]
+    - [3.0, 72.0]
+  damping_ratio: 0.02
+
+geometric_nonlinearity:
+  cubic_z: 300.0
+  cubic_theta: 25.0
+  cubic_coupling: 80.0
+  quadratic_coupling: 10.0
+
+tension_surrogate:
+  tension_only: true
+  direction: [1.0, 0.20]
+  stiffness: 15.0
+  low_tension_stiffness_ratio: 0.10
+  pretension: 0.10
+  low_tension_threshold: 0.05
+
+forcing:
+  type: harmonic
+  amplitudes: [1.0, 0.08]
+  frequency_hz: 0.80
+  phases_deg: [0.0, 0.0]
+  injected_2f_fraction: 0.05
+  broadband_components: []
+
+initial_conditions:
+  displacement: [0.0, 0.0]
+  velocity: [0.0, 0.0]
+
+solver:
+  method: RK45
+  duration_seconds: 20.0
+  sampling_frequency_hz: 100.0
+  max_step_seconds: 0.01
+  relative_tolerance: 1.0e-7
+  absolute_tolerance: 1.0e-9
+  max_runtime_seconds: 300.0
+
+analysis:
+  fundamental_frequency_hz: 0.80
+  frequency_reference: FORCING
+  response_coordinate: z
+  discard_initial_fraction: 0.50
+  spectral_window: hann
+  frequency_bin_tolerance_hz: 0.06
+  minimum_forcing_cycles: 8
+  integer_cycle_window: true
+  negative_control_max_A_2f_over_A_f: 0.01
+  injected_2f_min_A_2f_over_A_f: 0.005

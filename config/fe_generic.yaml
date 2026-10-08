@@ -1,0 +1,45 @@
+# Generic Stage 2B FE archetype. No value is an experimental or full-scale property.
+data_classification: GENERIC_FE_PROTOTYPE
+parameter_status: GENERIC_PLACEHOLDER_PARAMETER
+
+geometry:
+  span: 2.0
+  panel_width: 0.6
+  cable_spacing: 0.6
+
+panel:
+  mass: 8.0
+  rotational_inertia: 0.25
+
+cable:
+  area: 1.0e-4
+  youngs_modulus: 7.0e10
+  pretension: 100.0
+
+support_conditions:
+  type: PINNED_TRANSLATIONS
+
+damping:
+  modal_ratio: 0.02
+
+load:
+  vertical_force: -10.0
+  lateral_location_ratio: 0.0
+
+switches:
+  nlgeom: true
+  pretension: false
+  bending_torsion_freedom: true
+  tension_only: false
+
+analysis:
+  eigenmodes: 5
+  maximum_runtime_seconds: 300
+
+output:
+  vertical_displacement: true
+  torsional_response: true
+  cable_axial_force: true
+  modal_frequencies: true
+  reaction_forces: true
+  internal_force_histories: true

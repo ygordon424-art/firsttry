@@ -188,3 +188,24 @@ python scripts/nonlinear_rom.py --config config/rom_config.yaml
 ```
 
 The suite compares `MODEL_LIN`, `MODEL_GEO`, and `MODEL_TENSION_ONLY` under the same forcing and initial conditions. It writes only to `prototype_results/direction1_rom/<run_id>/`, labels all data `MECHANISM_PROTOTYPE`, and reuses the Stage 1 harmonic-analysis functions. A changed harmonic amplitude is a signal feature, not proof of cable slackening or any nonlinear physical mechanism. See `docs/DIRECTION1_ROM_METHOD.md` for equations, model switches, claim limits, and the evidence required before replacing this surrogate with a validated nonlinear finite-element model.
+
+## 16. Stage 2 mechanism controls and generic FE gate
+
+Stage 2 freezes the question: “To what extent can structural nonlinearities explain the experimentally observed frequency-doubled response?” The observation of 2f is not treated as the innovation. The controlled ROM separates quadratic/asymmetric coupling, cubic stiffness, nonlinear bending–torsion coupling, and the tension-only/piecewise surrogate.
+
+Run the minimal C0–C5 mechanism matrix plus the injected-input-2f software control with:
+
+```powershell
+python scripts/run_mechanism_screening.py
+```
+
+Every C0–C5 case uses the same single-frequency input with `forcing contains 2f = FALSE`. The analysis discards the configured startup fraction, uses an integer-cycle Hann-windowed spectrum, records frequency resolution and nearest-bin error, and requires an explicit `frequency_reference`. Outputs are `STAGE2_MECHANISM_DEVELOPMENT`, not formal results.
+
+The Stage 2B FE workflow is a tiny `GENERIC_FE_PROTOTYPE`, not the experimental structure:
+
+```powershell
+python fe/abaqus/generate_model.py --check-environment
+python fe/abaqus/generate_model.py --config config/fe_generic.yaml --output-dir fe/abaqus/generated
+```
+
+Generation does not submit Abaqus. If Abaqus or its license is unavailable, no FE values are fabricated. The current cable deck is a bilateral-truss baseline; `TENSION_ONLY_FE = NOT YET VERIFIED`. Read `docs/RESEARCH_PROTOCOL_FROZEN.md` and `docs/ABAQUS_GENERIC_MODEL.md` before interpreting or extending either prototype.
