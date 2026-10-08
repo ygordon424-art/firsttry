@@ -5,6 +5,7 @@
 - Total runtime: **9.499 s**
 - Parameter optimization/search: **NOT PERFORMED**
 - Interpretation scope: numerical mechanism capability and model-form sensitivity only.
+- Clean-HEAD verification (`8829325`): **35 tests passed in 4.50 s**
 
 | Case | Mode/control | Response | A_f | A_2f | A_3f | A_2f/A_f | min T | T<=0 fraction | softened fraction | transitions | f2/f1 |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
