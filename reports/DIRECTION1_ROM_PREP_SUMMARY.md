@@ -15,8 +15,8 @@ The implementation is a 2DOF bending-torsion mechanism-screening surrogate with 
 
 ## Verification record
 
-- Test command: `python -m pytest -q --basetemp=work/pytest-rom-final2 -p no:cacheprovider`
-- Test result: **25 passed in 13.08 s**
+- Clean-HEAD test command: `python -m pytest -q --basetemp=work/pytest -p no:cacheprovider`
+- Clean-HEAD test result: **20 passed in 3.89 s**
 - Prototype suite ID: `20261008T015634Z-007e40f5`
 - Source commit recorded by every prototype case: `e130274b50e129d41c469da9f86fcfa1c1021dee`
 - `MODEL_LIN` solver runtime: **0.401 s**
