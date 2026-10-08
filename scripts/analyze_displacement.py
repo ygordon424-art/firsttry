@@ -19,10 +19,10 @@ from scipy import signal
 
 try:
     from .experimental_data import identify_time_column, normalized_name, read_tabular_file, time_as_seconds
-    from .harmonic_analysis import identify_harmonics, one_sided_fft
+    from .harmonic_analysis import identify_harmonics, one_sided_fft, welch_psd
 except ImportError:
     from experimental_data import identify_time_column, normalized_name, read_tabular_file, time_as_seconds
-    from harmonic_analysis import identify_harmonics, one_sided_fft
+    from harmonic_analysis import identify_harmonics, one_sided_fft, welch_psd
 
 LOGGER = logging.getLogger("analyze_displacement")
 SYNTHETIC_LABEL = "SYNTHETIC_TEST_DATA"
@@ -67,10 +67,7 @@ def analyze_arrays(
     dt = float(np.median(np.diff(time)))
     sampling_frequency = 1.0 / dt
     detrended = signal.detrend(displacement, type="linear")
-    nperseg = min(1024, displacement.size)
-    psd_frequency, psd = signal.welch(
-        detrended, fs=sampling_frequency, nperseg=nperseg, detrend=False, scaling="density"
-    )
+    psd_frequency, psd = welch_psd(time, displacement)
     peak_indices, _ = signal.find_peaks(fft_amplitude[1:])
     peak_indices = peak_indices + 1
     ranked = peak_indices[np.argsort(fft_amplitude[peak_indices])[::-1]][:5]

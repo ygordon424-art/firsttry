@@ -176,3 +176,15 @@ Outputs include descriptive statistics, detrended signal, FFT, Welch PSD, domina
 `analyze_pressure_array.py` provides modular preparatory interfaces for synchronized pressure channels, Cp conversion, cross-correlation, cross-spectrum, coherence, and phase lag. Formal pressure-array analysis waits for verified channel maps, reference conditions, synchronization, and provenance.
 
 All generated unit-test signals are explicitly labeled `SYNTHETIC_TEST_DATA`, exist only inside temporary test directories, and are forbidden from writing beneath a `results` directory. Synthetic tests verify software behavior only and cannot support a research claim or novelty decision. See `docs/STAGE1_DATA_REQUIREMENTS.md`, `docs/FLEXIBLE_PV_GLOSSARY.md`, and `docs/STAGE1_DECISION_GATE.md` before accepting real data.
+
+## 15. Direction 1 ROM mechanism prototype
+
+The `stage1-direction1-rom` work adds a low-cost, interpretable 2DOF bending-torsion surrogate for mechanism screening. It is **not a validated full flexible-PV model**. Every default in `config/rom_config.yaml` is synthetic and non-physical; no value is intended to represent a real building, wind-tunnel model, PV system, or 45 m structure.
+
+Run the three-case synthetic minimum suite with:
+
+```powershell
+python scripts/nonlinear_rom.py --config config/rom_config.yaml
+```
+
+The suite compares `MODEL_LIN`, `MODEL_GEO`, and `MODEL_TENSION_ONLY` under the same forcing and initial conditions. It writes only to `prototype_results/direction1_rom/<run_id>/`, labels all data `MECHANISM_PROTOTYPE`, and reuses the Stage 1 harmonic-analysis functions. A changed harmonic amplitude is a signal feature, not proof of cable slackening or any nonlinear physical mechanism. See `docs/DIRECTION1_ROM_METHOD.md` for equations, model switches, claim limits, and the evidence required before replacing this surrogate with a validated nonlinear finite-element model.

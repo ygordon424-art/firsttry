@@ -44,6 +44,32 @@ def one_sided_fft(time: np.ndarray, values: np.ndarray) -> tuple[np.ndarray, np.
     return frequencies, amplitudes
 
 
+def welch_psd(
+    time: np.ndarray, values: np.ndarray, *, max_segment_samples: int = 1024
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return a Welch PSD after applying the same sampling checks used by the FFT."""
+    time = np.asarray(time, dtype=float)
+    values = np.asarray(values, dtype=float)
+    if time.ndim != 1 or values.ndim != 1 or time.size != values.size:
+        raise ValueError("time and values must be equal-length one-dimensional arrays")
+    if time.size < 8 or not np.isfinite(time).all() or not np.isfinite(values).all():
+        raise ValueError("At least eight finite samples are required")
+    intervals = np.diff(time)
+    if np.any(intervals <= 0):
+        raise ValueError("Time values must be strictly increasing")
+    median_dt = float(np.median(intervals))
+    if np.max(np.abs(intervals - median_dt)) / median_dt > 0.01:
+        raise ValueError("Welch PSD requires uniformly sampled data (interval deviation exceeds 1%)")
+    detrended = signal.detrend(values, type="linear")
+    return signal.welch(
+        detrended,
+        fs=1.0 / median_dt,
+        nperseg=min(max_segment_samples, values.size),
+        detrend=False,
+        scaling="density",
+    )
+
+
 def candidate_fundamental(frequencies: np.ndarray, amplitudes: np.ndarray) -> float:
     if frequencies.size < 2:
         raise ValueError("Spectrum does not contain a positive-frequency bin")
